@@ -48,60 +48,7 @@ If you use Google Gemini for research, coding, brainstorming, or any kind of kno
 
 Contributions are welcome! Feel free to fork the repo, make improvements, and submit a pull request. If you have ideas for new features, open an issue.
 
-## Development (for contributors)
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18+)
-- npm
-- Google Chrome
-
-### Setup
-
-```bash
-git clone https://github.com/dzineer/gemini-context-exporter.git
-cd gemini-context-exporter
-npm install
-```
-
-### Build
-
-```bash
-# Production build
-npm run build
-
-# Watch mode (rebuilds on file changes)
-npm run dev
-```
-
-Both commands output to the `dist/` folder. Load `dist/` as an unpacked extension in Chrome.
-
-After rebuilding, click the refresh icon on the extension card in `chrome://extensions/` and reload the Gemini tab.
-
-### Project Structure
-
-```
-gemini-exporter/
-  public/
-    manifest.json                  # Chrome Extension manifest (v3)
-  src/
-    main.jsx                       # Shadow DOM mount + React root
-    App.jsx                        # Mode router (Panel vs Sidebar)
-    context/                       # React Context + useReducer state machine
-    hooks/                         # useCollector, useChromeStorage, useDrag
-    components/
-      Panel/                       # Floating panel UI components
-      Sidebar/                     # Gemini sidebar injection
-      icons/                       # SVG icon components
-    utils/                         # Markdown converter, exporter, selectors
-    styles/                        # CSS tokens, animations, reset
-  vite.config.js
-  package.json
-```
-
-### Design System
-
-The UI uses a cyberpunk neon aesthetic with deep black backgrounds (`#020617`), cyan accents (`#00FFFF`), monospace typography, and neon glow effects. See [DESIGN.md](DESIGN.md) and [STYLEGUIDE.md](STYLEGUIDE.md) for full design specifications.
+See the [Developer Guide](docs/DEVELOPERS.md) for build instructions, project structure, and architecture details.
 
 ## License & Copyright
 
