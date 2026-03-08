@@ -1,71 +1,84 @@
 // ============================================================
-// Theme Definitions (from STYLEGUIDE.md)
+// State Machine + Theme Definitions
 // ============================================================
+const state = {
+    status: 'idle',        // 'idle' | 'scanning' | 'paused'
+    segments: [],
+    signatures: new Set(),
+    theme: 'dark',
+    uiMode: 'panel',      // 'panel' | 'sidebar'
+    monitor: null,
+};
+
+const refs = {
+    ui: null, statusEl: null, countBadge: null, modeBadge: null,
+    startBtn: null, exportBtn: null, injectBtn: null,
+    statusDot: null, progressBar: null, glowBar: null,
+    sidebarCounter: null, sidebarAnalyzeEl: null, sidebarExportEl: null,
+    ejectFab: null,
+};
+
 const themes = {
     dark: {
-        bgPrimary:      '#0a1628',
-        bgSecondary:    '#0f2035',
-        bgHeader:       '#0d1b2e',
-        bgHover:        '#142a45',
-        accentPrimary:  '#22d3ee',
+        bgPrimary:      '#020617',
+        bgSecondary:    '#0F172A',
+        bgCard:         '#1E293B',
+        bgHover:        '#1E293B',
+        accentPrimary:  '#00FFFF',
         accentSecondary:'#0ea5e9',
-        accentSuccess:  '#34d399',
-        textPrimary:    '#e2e8f0',
-        textSecondary:  '#64748b',
+        accentSuccess:  '#22C55E',
+        accentWarn:     '#FF006E',
+        textPrimary:    '#F8FAFC',
+        textSecondary:  '#94A3B8',
         textMuted:      '#475569',
-        textAccent:     '#22d3ee',
-        borderSubtle:   '#1e3a5c',
-        borderCard:     '#1a3050',
-        borderAccent:   '#22d3ee',
-        shadowPanel:    '0 8px 32px rgba(0, 10, 30, 0.6)',
-        btnGradient:    'linear-gradient(135deg, #0ea5e9, #22d3ee)',
-        btnText:        '#0a1628',
-        glowBar:        'linear-gradient(90deg, #0ea5e9, #22d3ee, #f59e0b)',
-        toggleIcon:     '\u2600\uFE0F',
+        textAccent:     '#00FFFF',
+        borderSubtle:   '#1E293B',
+        borderCard:     '#1E293B',
+        btnPrimary:     '#00FFFF',
+        btnPrimaryText: '#000000',
+        btnOutline:     '#00FFFF',
+        shadowPanel:    '0 0 30px rgba(0, 255, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.6)',
+        glowBar:        'linear-gradient(90deg, #00FFFF, #0ea5e9, #FF006E, #0ea5e9, #00FFFF)',
+        toggleIcon:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
     },
     light: {
         bgPrimary:      '#f8fafc',
         bgSecondary:    '#f1f5f9',
-        bgHeader:       '#f8fafc',
+        bgCard:         '#ffffff',
         bgHover:        '#e2e8f0',
         accentPrimary:  '#0891b2',
         accentSecondary:'#0369a1',
         accentSuccess:  '#059669',
+        accentWarn:     '#e11d48',
         textPrimary:    '#0f172a',
-        textSecondary:  '#64748b',
+        textSecondary:  '#475569',
         textMuted:      '#94a3b8',
         textAccent:     '#0891b2',
         borderSubtle:   '#e2e8f0',
         borderCard:     '#cbd5e1',
-        borderAccent:   '#0891b2',
+        btnPrimary:     '#0891b2',
+        btnPrimaryText: '#ffffff',
+        btnOutline:     '#0891b2',
         shadowPanel:    '0 8px 32px rgba(0, 0, 0, 0.12)',
-        btnGradient:    'linear-gradient(135deg, #0369a1, #0891b2)',
-        btnText:        '#ffffff',
-        glowBar:        'linear-gradient(90deg, #0369a1, #0891b2, #f59e0b)',
-        toggleIcon:     '\uD83C\uDF19',
+        glowBar:        'linear-gradient(90deg, #0369a1, #0891b2, #e11d48, #0891b2, #0369a1)',
+        toggleIcon:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
     }
 };
 
-let currentTheme = 'dark';
-let monitor;
-let messageQueue = [];
-let seenSignatures = new Set();
-let sidebarCounter = null;   // reference to the sidebar counter element
-let sidebarAnalyzeEl = null; // reference to sidebar analyze button (for pulse)
-let sidebarExportEl = null;  // reference to sidebar export button (show/hide)
-
 // ============================================================
-// SVG Icons (shared between panel and sidebar)
+// SVG Icons
 // ============================================================
 const ICONS = {
-    analyze:  '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6" opacity="0.4"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="12" y1="12" x2="12" y2="3" class="gemini-exporter-sweep-arm"/></svg>',
+    analyze:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6" opacity="0.4"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="12" y1="12" x2="12" y2="3" class="gemini-exporter-sweep-arm"/></svg>',
+    export:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+    stop:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="8" y="8" width="8" height="8" rx="1" fill="currentColor" stroke="none"/></svg>',
+    pin:      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+    eject:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+    hexIcon:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><line x1="22" y1="8.5" x2="12" y2="15.5"/><line x1="2" y1="8.5" x2="12" y2="15.5"/></svg>',
+    // Sidebar (24px)
     analyzeLg:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6" opacity="0.4"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="12" y1="12" x2="12" y2="3" class="gemini-exporter-sweep-arm"/></svg>',
-    export:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
     exportLg: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
-    live:     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="10"/></svg>',
-    pin:      '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-    check:    '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-    eject:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+    stopLg:   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="8" y="8" width="8" height="8" rx="1" fill="currentColor" stroke="none"/></svg>',
 };
 
 // ============================================================
@@ -111,41 +124,35 @@ const patternProcessor = (node) => {
 };
 
 // ============================================================
-// Collection Loop (shared between panel & sidebar mode)
+// Collection
 // ============================================================
-const MAX_SEGMENTS = 500; // safety cap
+const MAX_SEGMENTS = 500;
 
 const collect = () => {
-    if (messageQueue.length >= MAX_SEGMENTS) return;
+    if (state.segments.length >= MAX_SEGMENTS) return;
     const targets = 'message-content, .query-text, .model-response-text, [data-test-id="message-content"]';
+    let found = false;
     document.querySelectorAll(targets).forEach(el => {
-        if (messageQueue.length >= MAX_SEGMENTS) return;
+        if (state.segments.length >= MAX_SEGMENTS) return;
         const sig = el.innerText.trim().substring(0, 500);
-        if (sig && !seenSignatures.has(sig)) {
-            seenSignatures.add(sig);
-            // Process to markdown immediately — never store DOM clones
+        if (sig && !state.signatures.has(sig)) {
+            state.signatures.add(sig);
             const role = (el.classList.contains('query-text') || el.tagName === 'USER-QUERY') ? "USER" : "GEMINI";
             const markdown = patternProcessor(el);
-            messageQueue.push({ role, markdown });
-            // Update panel badges if visible
-            if (countBadge) countBadge.innerText = `Segments: ${messageQueue.length}`;
-            if (statusEl) statusEl.innerText = `Captured: ${messageQueue.length} segments`;
-            // Show export buttons once we have content
-            if (exportBtn) exportBtn.style.display = 'flex';
-            if (sidebarExportEl) sidebarExportEl.style.display = '';
-            // Update sidebar counter if injected
-            if (sidebarCounter) sidebarCounter.textContent = messageQueue.length;
+            state.segments.push({ role, markdown });
+            found = true;
         }
     });
+    if (found) render();
 };
 
 // ============================================================
-// Export logic (shared)
+// Export
 // ============================================================
 const doExport = () => {
-    if (messageQueue.length === 0) return alert("Nothing analyzed! Please scroll through the chat first.");
+    if (state.segments.length === 0) return;
     let finalDoc = `# Gemini Smart Export\nGenerated: ${new Date().toLocaleString()}\n\n---\n\n`;
-    messageQueue.forEach(item => {
+    state.segments.forEach(item => {
         const roleLabel = item.role === "USER" ? "### \uD83D\uDC64 USER" : "### \u264A GEMINI";
         finalDoc += `${roleLabel}\n\n${item.markdown}\n\n---\n\n`;
     });
@@ -157,11 +164,12 @@ const doExport = () => {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    // Free the blob from memory
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-// Inject pulse keyframes once
+// ============================================================
+// CSS Animations
+// ============================================================
 const pulseStyle = document.createElement('style');
 pulseStyle.textContent = `
 @keyframes gemini-exporter-sweep {
@@ -181,45 +189,191 @@ pulseStyle.textContent = `
     stroke: #ff3b3b;
     animation: gemini-exporter-sweep 1.5s linear infinite, gemini-exporter-pulse-red 0.8s ease-in-out infinite;
 }
+@keyframes gemini-exporter-wave {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
 `;
 document.head.appendChild(pulseStyle);
 
-const doAnalyze = () => {
-    if (monitor) return;
-    monitor = setInterval(collect, 600);
-    // Start pulsing the sidebar analyze icon
-    if (sidebarAnalyzeEl) sidebarAnalyzeEl.classList.add('gemini-exporter-scanning');
-    // Also pulse the panel button if it exists
-    if (startBtn) startBtn.classList.add('gemini-exporter-scanning');
+// ============================================================
+// Transitions — the ONLY way to change state
+// ============================================================
+const transition = (action) => {
+    switch (action) {
+        case 'startScan':
+            state.status = 'scanning';
+            state.monitor = setInterval(collect, 600);
+            break;
+        case 'stopScan':
+            clearInterval(state.monitor);
+            state.monitor = null;
+            state.status = state.segments.length ? 'paused' : 'idle';
+            break;
+        case 'toggleAnalyze':
+            if (state.status === 'scanning') transition('stopScan');
+            else transition('startScan');
+            return;
+        case 'export':
+            doExport();
+            break;
+        case 'pin':
+            teardownPanel();
+            state.uiMode = 'sidebar';
+            setupSidebar();
+            break;
+        case 'unpin':
+            teardownSidebar();
+            state.uiMode = 'panel';
+            buildPanel();
+            return; // buildPanel calls render
+        case 'toggleTheme':
+            state.theme = state.theme === 'dark' ? 'light' : 'dark';
+            chrome.storage.local.set({ theme: state.theme });
+            break;
+    }
+    render();
 };
 
 // ============================================================
-// References for panel elements (may or may not exist)
+// Render — reads state + refs, updates ALL UI
 // ============================================================
-let ui = null, statusEl = null, countBadge = null, modeBadge = null;
-let startBtn = null, exportBtn = null, injectBtn = null;
+const render = () => {
+    const c = themes[state.theme];
+    const scanning = state.status === 'scanning';
+    const hasSegments = state.segments.length > 0;
+    const isDark = state.theme === 'dark';
+
+    // ── Panel mode ──
+    if (refs.ui) {
+        refs.ui.style.background = c.bgPrimary;
+        refs.ui.style.border = `1px solid ${c.borderSubtle}`;
+        refs.ui.style.boxShadow = c.shadowPanel;
+    }
+    if (refs.statusDot) {
+        const amber = '#F59E0B';
+        refs.statusDot.style.background = scanning ? c.accentSuccess : amber;
+        refs.statusDot.style.boxShadow = scanning ? '0 0 8px ' + c.accentSuccess : '0 0 6px ' + amber;
+    }
+    if (refs.statusEl) {
+        if (scanning) refs.statusEl.innerText = `SCANNING \u00B7 ${state.segments.length}`;
+        else if (state.status === 'paused') refs.statusEl.innerText = `PAUSED \u00B7 ${state.segments.length}`;
+        else refs.statusEl.innerText = 'STANDBY';
+        refs.statusEl.style.color = scanning ? c.accentSuccess : c.textAccent;
+    }
+    if (refs.countBadge) {
+        refs.countBadge.innerText = `${state.segments.length} segments`;
+        refs.countBadge.style.color = c.textPrimary;
+    }
+    if (refs.modeBadge) {
+        refs.modeBadge.innerText = scanning ? 'LIVE' : 'IDLE';
+        refs.modeBadge.style.color = scanning ? c.accentSuccess : c.textPrimary;
+        refs.modeBadge.style.borderColor = scanning ? c.accentSuccess + '60' : c.textMuted + '40';
+        refs.modeBadge.style.background = scanning ? c.accentSuccess + '15' : 'transparent';
+    }
+    if (refs.progressBar) {
+        const pct = Math.min((state.segments.length / 50) * 100, 100);
+        refs.progressBar.style.width = pct + '%';
+        refs.progressBar.style.background = c.accentPrimary;
+    }
+    if (refs.startBtn) {
+        if (scanning) {
+            refs.startBtn.innerHTML = `<span style="color:#FF3B3B">${ICONS.stop}</span><span style="flex:1;text-align:left;color:#F8FAFC">Stop</span>`;
+            refs.startBtn.style.background = c.accentSuccess;
+            refs.startBtn.style.color = c.btnPrimaryText;
+            refs.startBtn.classList.add('gemini-exporter-scanning');
+        } else {
+            refs.startBtn.innerHTML = `${ICONS.analyze}<span style="flex:1;text-align:left">Analyze</span>`;
+            refs.startBtn.style.background = c.btnPrimary;
+            refs.startBtn.style.color = c.btnPrimaryText;
+            refs.startBtn.classList.remove('gemini-exporter-scanning');
+        }
+        refs.startBtn.style.boxShadow = isDark ? '0 0 15px ' + (scanning ? c.accentSuccess : c.accentPrimary) + '30' : 'none';
+    }
+    if (refs.exportBtn) {
+        refs.exportBtn.innerHTML = `${ICONS.export}<span style="flex:1;text-align:left">Export</span>`;
+        const enabled = hasSegments;
+        refs.exportBtn.style.background = 'transparent';
+        refs.exportBtn.style.border = '1px solid ' + c.btnOutline + (enabled ? '' : '40');
+        refs.exportBtn.style.color = enabled ? c.accentPrimary : c.textMuted;
+        refs.exportBtn.style.opacity = enabled ? '1' : '0.4';
+        refs.exportBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+        refs.exportBtn.style.pointerEvents = enabled ? 'auto' : 'none';
+    }
+    if (refs.injectBtn) {
+        refs.injectBtn.style.borderColor = c.textMuted + '60';
+        refs.injectBtn.style.color = c.textSecondary;
+    }
+    if (refs.glowBar) {
+        refs.glowBar.style.backgroundImage = c.glowBar;
+        refs.glowBar.style.backgroundSize = '200% 100%';
+        refs.glowBar.style.animation = scanning ? 'gemini-exporter-wave 2s linear infinite' : 'none';
+        refs.glowBar.style.boxShadow = isDark ? '0 0 8px ' + c.accentPrimary + '40' : 'none';
+    }
+    // Header theming (refs set by buildPanel)
+    if (refs._header) refs._header.style.background = c.bgSecondary;
+    if (refs._headerIcon) {
+        refs._headerIcon.style.color = c.accentPrimary;
+        refs._headerIcon.style.filter = isDark ? 'drop-shadow(0 0 6px ' + c.accentPrimary + ')' : 'none';
+    }
+    if (refs._headerTitle) {
+        refs._headerTitle.style.color = c.textPrimary;
+        refs._headerTitle.style.textShadow = isDark ? '0 0 10px ' + c.accentPrimary + '40' : 'none';
+    }
+    if (refs._divider) {
+        refs._divider.style.background = isDark
+            ? 'linear-gradient(90deg, transparent, ' + c.accentPrimary + '40, transparent)'
+            : c.borderCard;
+    }
+    if (refs._statusCard) {
+        refs._statusCard.style.background = c.bgCard;
+        refs._statusCard.style.borderColor = scanning ? c.accentSuccess : c.borderSubtle;
+        refs._statusCard.style.boxShadow = scanning && isDark ? '0 0 12px ' + c.accentSuccess + '30' : 'none';
+    }
+    if (refs._progressWrap) refs._progressWrap.style.background = c.borderSubtle;
+    if (refs._themeBtn) refs._themeBtn.innerHTML = c.toggleIcon;
+    [refs._themeBtn, refs._collapseBtn, refs._closeBtn].forEach(btn => {
+        if (!btn) return;
+        btn.style.color = c.textPrimary;
+        btn.onmouseover = () => { btn.style.color = c.accentPrimary; btn.style.background = c.bgHover; };
+        btn.onmouseout  = () => { btn.style.color = c.textPrimary; btn.style.background = 'none'; };
+    });
+
+    // ── Sidebar mode ──
+    if (refs.sidebarAnalyzeEl) {
+        if (scanning) refs.sidebarAnalyzeEl.classList.add('gemini-exporter-scanning');
+        else refs.sidebarAnalyzeEl.classList.remove('gemini-exporter-scanning');
+    }
+    if (refs.sidebarExportEl) {
+        refs.sidebarExportEl.style.display = hasSegments ? '' : 'none';
+    }
+    if (refs.sidebarCounter) {
+        refs.sidebarCounter.textContent = state.segments.length;
+        refs.sidebarCounter.parentElement.style.display = hasSegments ? 'flex' : 'none';
+    }
+};
 
 // ============================================================
-// Floating Eject Button (shown when sidebar is pinned)
+// Teardown helpers
 // ============================================================
-const createEjectFab = (onEject) => {
-    const fab = document.createElement('button');
-    fab.innerHTML = ICONS.eject;
-    fab.title = 'Unpin from sidebar — show panel';
-    fab.style.cssText = `
-        position: fixed; top: 80px; right: 20px; z-index: 9999;
-        width: 36px; height: 36px;
-        display: flex; align-items: center; justify-content: center;
-        background: #0a1628; border: 1px solid #1e3a5c;
-        border-radius: 50%; cursor: pointer;
-        color: #22d3ee; box-shadow: 0 4px 16px rgba(0,10,30,0.5);
-        transition: all 0.2s ease;
-    `;
-    fab.onmouseover = () => { fab.style.transform = 'scale(1.1)'; fab.style.borderColor = '#22d3ee'; };
-    fab.onmouseout  = () => { fab.style.transform = 'scale(1.0)'; fab.style.borderColor = '#1e3a5c'; };
-    fab.onclick = onEject;
-    document.body.appendChild(fab);
-    return fab;
+const teardownPanel = () => {
+    if (refs.ui) refs.ui.remove();
+    refs.ui = null; refs.statusEl = null; refs.countBadge = null;
+    refs.modeBadge = null; refs.startBtn = null; refs.exportBtn = null;
+    refs.injectBtn = null; refs.statusDot = null; refs.progressBar = null;
+    refs.glowBar = null; refs._header = null; refs._headerIcon = null;
+    refs._headerTitle = null; refs._divider = null; refs._statusCard = null;
+    refs._progressWrap = null; refs._themeBtn = null; refs._collapseBtn = null;
+    refs._closeBtn = null;
+};
+
+const teardownSidebar = () => {
+    document.querySelectorAll('.gemini-exporter-injected').forEach(el => el.remove());
+    if (refs.ejectFab) refs.ejectFab.remove();
+    refs.sidebarCounter = null;
+    refs.sidebarAnalyzeEl = null;
+    refs.sidebarExportEl = null;
+    refs.ejectFab = null;
 };
 
 // ============================================================
@@ -229,7 +383,6 @@ const cloneSidebarButton = (originalList, svgHtml, ariaLabel, onClick) => {
     const clone = originalList.cloneNode(true);
     clone.querySelectorAll('[data-test-id]').forEach(el => el.removeAttribute('data-test-id'));
     clone.classList.add('gemini-exporter-injected');
-
     const matIcon = clone.querySelector('mat-icon');
     if (matIcon) {
         matIcon.removeAttribute('fonticon');
@@ -241,121 +394,114 @@ const cloneSidebarButton = (originalList, svgHtml, ariaLabel, onClick) => {
         matIcon.style.justifyContent = 'center';
         matIcon.innerHTML = svgHtml;
     }
-
     const anchor = clone.querySelector('a');
     if (anchor) {
         anchor.removeAttribute('href');
         anchor.setAttribute('aria-label', ariaLabel);
         anchor.style.cursor = 'pointer';
     }
-
-    clone.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick();
-    });
-
+    clone.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClick(); });
     return clone;
 };
 
-const createSidebarCounter = (originalList) => {
-    // Clone the structure but make it a passive counter display
-    const clone = originalList.cloneNode(true);
-    clone.querySelectorAll('[data-test-id]').forEach(el => el.removeAttribute('data-test-id'));
-    clone.classList.add('gemini-exporter-injected');
-
-    const matIcon = clone.querySelector('mat-icon');
-    if (matIcon) {
-        matIcon.removeAttribute('fonticon');
-        matIcon.removeAttribute('data-mat-icon-name');
-        matIcon.classList.remove('mat-ligature-font', 'google-symbols');
-        matIcon.style.fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
-        matIcon.style.fontSize = '11px';
-        matIcon.style.fontWeight = '700';
-        matIcon.style.color = '#22d3ee';
-        matIcon.style.display = 'flex';
-        matIcon.style.alignItems = 'center';
-        matIcon.style.justifyContent = 'center';
-        matIcon.textContent = '0';
-    }
-
-    const anchor = clone.querySelector('a');
-    if (anchor) {
-        anchor.removeAttribute('href');
-        anchor.setAttribute('aria-label', 'Segments captured');
-        anchor.style.cursor = 'default';
-        anchor.style.opacity = '0.8';
-    }
-
-    return { el: clone, counter: matIcon };
-};
-
-const injectIntoSidebar = () => {
+const setupSidebar = () => {
     const originalList = document.querySelector('mat-action-list.top-action-list');
-    if (!originalList) return false;
+    if (!originalList) {
+        // Sidebar not found — revert to panel
+        state.uiMode = 'panel';
+        buildPanel();
+        return;
+    }
 
-    const analyzeList = cloneSidebarButton(originalList, ICONS.analyzeLg, 'Analyze conversation', doAnalyze);
-    sidebarAnalyzeEl = analyzeList;
-    const exportList  = cloneSidebarButton(originalList, ICONS.exportLg, 'Export conversation', doExport);
-    sidebarExportEl = exportList;
-    exportList.style.display = 'none'; // hidden until segments are captured
-    const { el: counterList, counter } = createSidebarCounter(originalList);
-    sidebarCounter = counter;
+    const analyzeList = cloneSidebarButton(originalList, ICONS.analyzeLg, 'Analyze conversation', () => transition('toggleAnalyze'));
+    refs.sidebarAnalyzeEl = analyzeList;
 
-    originalList.after(analyzeList, exportList, counterList);
+    const exportList = cloneSidebarButton(originalList, ICONS.exportLg, 'Export conversation', () => transition('export'));
+    refs.sidebarExportEl = exportList;
+    exportList.style.display = 'none';
 
-    return true;
-};
+    // Counter
+    const wrap = document.createElement('div');
+    wrap.classList.add('gemini-exporter-injected');
+    wrap.style.cssText = 'display:none;align-items:center;justify-content:center;padding:8px 0;';
+    const counter = document.createElement('span');
+    counter.style.cssText = "font-family:'SF Mono','Fira Code',monospace;font-size:11px;font-weight:700;color:#00FFFF;letter-spacing:1px;text-align:center;";
+    counter.textContent = '0';
+    wrap.appendChild(counter);
+    refs.sidebarCounter = counter;
 
-const removeSidebarInjections = () => {
-    document.querySelectorAll('.gemini-exporter-injected').forEach(el => el.remove());
-    sidebarCounter = null;
-    sidebarAnalyzeEl = null;
-    sidebarExportEl = null;
+    originalList.after(analyzeList, exportList, wrap);
+
+    // Eject fab
+    const fab = document.createElement('button');
+    fab.innerHTML = ICONS.eject;
+    fab.title = 'Unpin from sidebar';
+    fab.classList.add('gemini-exporter-eject-fab');
+    fab.style.cssText = `
+        position:fixed;top:80px;right:20px;z-index:9999;
+        width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+        background:#020617;border:1px solid #1E293B;border-radius:50%;cursor:pointer;
+        color:#00FFFF;box-shadow:0 4px 16px rgba(0,10,30,0.5);transition:all 0.2s ease;
+    `;
+    fab.onmouseover = () => { fab.style.borderColor = '#00FFFF'; fab.style.boxShadow = '0 0 12px rgba(0,255,255,0.3)'; };
+    fab.onmouseout  = () => { fab.style.borderColor = '#1E293B'; fab.style.boxShadow = '0 4px 16px rgba(0,10,30,0.5)'; };
+    fab.onclick = () => { chrome.storage.local.set({ sidebarPinned: false }); transition('unpin'); };
+    document.body.appendChild(fab);
+    refs.ejectFab = fab;
+
+    chrome.storage.local.set({ sidebarPinned: true });
+    render();
 };
 
 // ============================================================
-// Panel UI Builder
+// Panel UI Builder — Cyberpunk Neon
 // ============================================================
 const buildPanel = () => {
-    ui = document.createElement('div');
+    const ui = document.createElement('div');
     ui.style.cssText = `
-        position: fixed; top: 80px; right: 20px; z-index: 9999;
-        display: flex; flex-direction: column;
-        width: 190px; border-radius: 10px;
-        font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        overflow: hidden; transition: all 0.3s ease;
+        position:fixed;top:80px;right:20px;z-index:9999;
+        display:flex;flex-direction:column;width:270px;border-radius:14px;
+        font-family:'SF Mono','Fira Code','Cascadia Code','Consolas',monospace;
+        overflow:hidden;transition:all 0.3s ease;
     `;
     document.body.appendChild(ui);
+    refs.ui = ui;
 
     // Header
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 10px;cursor:grab;user-select:none;';
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:grab;user-select:none;';
+    refs._header = header;
 
     const headerLeft = document.createElement('div');
-    headerLeft.style.cssText = 'display:flex;align-items:center;gap:5px;';
+    headerLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
     const headerIcon = document.createElement('span');
-    headerIcon.innerText = '\u2666';
-    headerIcon.style.cssText = 'font-size:13px;';
+    headerIcon.innerHTML = ICONS.hexIcon;
+    headerIcon.style.cssText = 'display:flex;align-items:center;';
+    refs._headerIcon = headerIcon;
     const headerTitle = document.createElement('span');
     headerTitle.innerText = 'EXPORTER';
-    headerTitle.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;';
+    headerTitle.style.cssText = 'font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;';
+    refs._headerTitle = headerTitle;
     headerLeft.appendChild(headerIcon);
     headerLeft.appendChild(headerTitle);
 
     const headerRight = document.createElement('div');
     headerRight.style.cssText = 'display:flex;align-items:center;gap:2px;';
 
-    const themeBtn = document.createElement('button');
-    themeBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:11px;padding:2px 3px;border-radius:3px;transition:0.2s;line-height:1;';
-
-    const collapseBtn = document.createElement('button');
-    collapseBtn.innerHTML = '\u2303';
-    collapseBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:12px;padding:2px 3px;border-radius:3px;transition:0.2s;line-height:1;';
-
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '\u00D7';
-    closeBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;border-radius:3px;transition:0.2s;line-height:1;font-weight:bold;';
+    const mkHdrBtn = (html, title) => {
+        const b = document.createElement('button');
+        b.innerHTML = html;
+        b.title = title;
+        b.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all 0.2s;line-height:1;';
+        return b;
+    };
+    const themeBtn = mkHdrBtn('', 'Toggle theme');
+    const collapseBtn = mkHdrBtn('\u2303', 'Collapse');
+    const closeBtn = mkHdrBtn('\u00D7', 'Close');
+    closeBtn.style.fontWeight = 'bold';
+    refs._themeBtn = themeBtn;
+    refs._collapseBtn = collapseBtn;
+    refs._closeBtn = closeBtn;
 
     headerRight.appendChild(themeBtn);
     headerRight.appendChild(collapseBtn);
@@ -366,116 +512,115 @@ const buildPanel = () => {
 
     // Divider
     const divider = document.createElement('div');
-    divider.style.cssText = 'height:1px;margin:0 10px;';
+    divider.style.cssText = 'height:1px;margin:0 16px;';
+    refs._divider = divider;
     ui.appendChild(divider);
 
     // Body
     const body = document.createElement('div');
-    body.style.cssText = 'padding:8px 10px;display:flex;flex-direction:column;gap:6px;';
+    body.style.cssText = 'padding:14px 16px;display:flex;flex-direction:column;gap:12px;';
     ui.appendChild(body);
 
-    statusEl = document.createElement('div');
-    statusEl.innerText = 'Analyzer: Standby';
-    statusEl.style.cssText = 'font-size:10px;font-weight:600;text-align:center;padding:4px 0;';
-    body.appendChild(statusEl);
+    // Status card
+    const statusCard = document.createElement('div');
+    statusCard.style.cssText = 'border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;border:1px solid;transition:all 0.3s ease;';
+    refs._statusCard = statusCard;
+    body.appendChild(statusCard);
 
-    const badgeRow = document.createElement('div');
-    badgeRow.style.cssText = 'display:flex;justify-content:center;gap:5px;';
-    countBadge = document.createElement('span');
-    countBadge.innerText = 'Segments: 0';
-    countBadge.style.cssText = 'font-size:9px;font-weight:600;letter-spacing:0.3px;padding:2px 7px;border-radius:999px;';
-    modeBadge = document.createElement('span');
-    modeBadge.innerText = 'Idle';
-    modeBadge.style.cssText = 'font-size:9px;font-weight:600;letter-spacing:0.3px;padding:2px 7px;border-radius:999px;';
-    badgeRow.appendChild(countBadge);
-    badgeRow.appendChild(modeBadge);
-    body.appendChild(badgeRow);
+    const statusRow = document.createElement('div');
+    statusRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    const statusDot = document.createElement('span');
+    statusDot.style.cssText = 'width:8px;height:8px;border-radius:50%;transition:all 0.3s;flex-shrink:0;';
+    refs.statusDot = statusDot;
+    const statusEl = document.createElement('span');
+    statusEl.style.cssText = 'font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;';
+    refs.statusEl = statusEl;
+    statusRow.appendChild(statusDot);
+    statusRow.appendChild(statusEl);
+    statusCard.appendChild(statusRow);
 
-    // Action buttons
+    const segRow = document.createElement('div');
+    segRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
+    const countBadge = document.createElement('span');
+    countBadge.style.cssText = 'font-size:11px;font-weight:500;letter-spacing:0.5px;';
+    refs.countBadge = countBadge;
+    const modeBadge = document.createElement('span');
+    modeBadge.style.cssText = 'font-size:9px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:4px;border:1px solid;text-transform:uppercase;';
+    refs.modeBadge = modeBadge;
+    segRow.appendChild(countBadge);
+    segRow.appendChild(modeBadge);
+    statusCard.appendChild(segRow);
+
+    const progressWrap = document.createElement('div');
+    progressWrap.style.cssText = 'width:100%;height:3px;border-radius:2px;overflow:hidden;';
+    refs._progressWrap = progressWrap;
+    const progressBar = document.createElement('div');
+    progressBar.style.cssText = 'width:0%;height:100%;border-radius:2px;transition:width 0.4s ease;';
+    refs.progressBar = progressBar;
+    progressWrap.appendChild(progressBar);
+    statusCard.appendChild(progressWrap);
+
+    // Buttons
     const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'display:flex;gap:4px;';
-    const btnStyle = 'flex:1;padding:6px 0;border:none;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s ease;';
+    btnRow.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
 
-    startBtn = document.createElement('button');
-    startBtn.innerHTML = ICONS.analyze;
-    startBtn.title = 'Analyze';
-    startBtn.style.cssText = btnStyle;
+    const mkBtn = (label) => {
+        const b = document.createElement('button');
+        b.style.cssText = `
+            width:100%;height:42px;border:none;border-radius:8px;cursor:pointer;
+            display:flex;align-items:center;gap:10px;padding:0 14px;
+            font-family:inherit;font-size:12px;font-weight:700;
+            text-transform:uppercase;letter-spacing:1px;
+            transition:all 0.2s ease;
+        `;
+        b.onmouseover = () => { b.style.filter = 'brightness(1.15)'; };
+        b.onmouseout  = () => { b.style.filter = 'brightness(1)'; };
+        return b;
+    };
 
-    exportBtn = document.createElement('button');
-    exportBtn.innerHTML = ICONS.export;
-    exportBtn.title = 'Export';
-    exportBtn.style.cssText = btnStyle;
-    exportBtn.style.display = 'none'; // hidden until segments are captured
+    const startBtn = mkBtn('Analyze');
+    startBtn.onclick = () => transition('toggleAnalyze');
+    refs.startBtn = startBtn;
 
-    [startBtn, exportBtn].forEach(btn => {
-        btn.onmouseover = () => { btn.style.filter = 'brightness(1.15)'; btn.style.transform = 'translateY(-1px)'; };
-        btn.onmouseout  = () => { btn.style.filter = 'brightness(1.0)';  btn.style.transform = 'translateY(0)'; };
-    });
+    const exportBtn = mkBtn('Export');
+    exportBtn.onclick = () => {
+        transition('export');
+        if (refs.statusEl && state.segments.length) {
+            refs.statusEl.innerText = 'EXPORTED';
+            setTimeout(() => render(), 3000);
+        }
+    };
+    refs.exportBtn = exportBtn;
 
     btnRow.appendChild(startBtn);
     btnRow.appendChild(exportBtn);
     body.appendChild(btnRow);
 
-    // Pin to sidebar button
-    injectBtn = document.createElement('button');
-    injectBtn.innerHTML = ICONS.pin;
+    // Pin button
+    const injectBtn = document.createElement('button');
+    injectBtn.innerHTML = `${ICONS.pin}<span>Pin to Sidebar</span>`;
     injectBtn.title = 'Pin to Sidebar';
-    injectBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:4px 0;border:1px dashed;border-radius:5px;cursor:pointer;font-weight:600;font-size:8px;text-transform:uppercase;letter-spacing:0.3px;background:none;transition:all 0.2s ease;width:100%;';
-    injectBtn.onmouseover = () => { injectBtn.style.filter = 'brightness(1.3)'; };
-    injectBtn.onmouseout  = () => { injectBtn.style.filter = 'brightness(1.0)'; };
+    injectBtn.style.cssText = `
+        display:flex;align-items:center;justify-content:center;gap:8px;
+        padding:8px 0;border:1px dashed;border-radius:8px;cursor:pointer;
+        font-family:inherit;font-weight:600;font-size:10px;
+        text-transform:uppercase;letter-spacing:1px;
+        background:none;transition:all 0.2s ease;width:100%;
+    `;
+    injectBtn.onmouseover = () => { const c = themes[state.theme]; injectBtn.style.borderColor = c.accentPrimary; injectBtn.style.color = c.accentPrimary; };
+    injectBtn.onmouseout  = () => { const c = themes[state.theme]; injectBtn.style.borderColor = c.textMuted + '60'; injectBtn.style.color = c.textSecondary; };
+    injectBtn.onclick = () => transition('pin');
+    refs.injectBtn = injectBtn;
     body.appendChild(injectBtn);
 
     // Glow bar
     const glowBar = document.createElement('div');
-    glowBar.style.cssText = 'height:2px;margin-top:4px;border-radius:0 0 10px 10px;';
+    glowBar.style.cssText = 'height:3px;border-radius:0 0 14px 14px;background-size:200% 100%;';
+    refs.glowBar = glowBar;
     ui.appendChild(glowBar);
 
-    // Theme application
-    let collapsed = false;
-    const applyTheme = (t) => {
-        currentTheme = t;
-        const c = themes[t];
-        ui.style.background = c.bgPrimary;
-        ui.style.border = `1px solid ${c.borderSubtle}`;
-        ui.style.boxShadow = c.shadowPanel;
-        header.style.background = c.bgHeader;
-        headerIcon.style.color = c.accentPrimary;
-        headerTitle.style.color = c.textPrimary;
-        [themeBtn, collapseBtn, closeBtn].forEach(btn => {
-            btn.style.color = c.textSecondary;
-            btn.onmouseover = () => { btn.style.color = c.textPrimary; btn.style.background = c.bgHover; };
-            btn.onmouseout  = () => { btn.style.color = c.textSecondary; btn.style.background = 'none'; };
-        });
-        themeBtn.innerText = c.toggleIcon;
-        divider.style.background = c.borderCard;
-        statusEl.style.color = c.textAccent;
-        countBadge.style.border = `1px solid ${c.borderAccent}`;
-        countBadge.style.color = c.accentPrimary;
-        modeBadge.style.border = `1px solid ${monitor ? c.accentSuccess : c.textMuted}`;
-        modeBadge.style.color = monitor ? c.accentSuccess : c.textMuted;
-        startBtn.style.background = monitor ? c.accentSuccess : c.btnGradient;
-        startBtn.style.color = c.btnText;
-        exportBtn.style.background = c.btnGradient;
-        exportBtn.style.color = c.btnText;
-        injectBtn.style.borderColor = c.textMuted;
-        injectBtn.style.color = c.textSecondary;
-        glowBar.style.background = c.glowBar;
-    };
-
-    // Theme toggle
-    themeBtn.onclick = () => {
-        const next = currentTheme === 'dark' ? 'light' : 'dark';
-        applyTheme(next);
-        chrome.storage.local.set({ theme: next });
-    };
-
-    // Load theme
-    chrome.storage.local.get('theme', (result) => {
-        if (result.theme) applyTheme(result.theme);
-        else applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    });
-
     // Collapse / close
+    let collapsed = false;
     collapseBtn.onclick = () => {
         collapsed = !collapsed;
         body.style.display = collapsed ? 'none' : 'flex';
@@ -483,10 +628,10 @@ const buildPanel = () => {
         collapseBtn.innerHTML = collapsed ? '\u2304' : '\u2303';
     };
     closeBtn.onclick = () => {
-        ui.remove();
-        ui = null;
-        if (monitor) { clearInterval(monitor); monitor = null; }
+        if (state.monitor) { clearInterval(state.monitor); state.monitor = null; state.status = state.segments.length ? 'paused' : 'idle'; }
+        teardownPanel();
     };
+    themeBtn.onclick = () => transition('toggleTheme');
 
     // Drag
     (() => {
@@ -515,82 +660,30 @@ const buildPanel = () => {
         });
     })();
 
-    // Button actions
-    startBtn.onclick = () => {
-        if (monitor) return;
-        startBtn.innerHTML = ICONS.live;
-        modeBadge.innerText = 'Active';
-        statusEl.innerText = 'Slowly scroll the chat';
-        doAnalyze();
-        applyTheme(currentTheme);
-    };
-    exportBtn.onclick = () => {
-        doExport();
-        if (statusEl) {
-            statusEl.innerText = '\u2705 Export Complete!';
-            setTimeout(() => { statusEl.innerText = `Captured: ${messageQueue.length} segments`; }, 3000);
-        }
-    };
-
-    // Pin to sidebar
-    injectBtn.onclick = () => {
-        const ok = injectIntoSidebar();
-        if (!ok) {
-            statusEl.innerText = 'Sidebar not found';
-            setTimeout(() => { statusEl.innerText = 'Analyzer: Standby'; }, 2000);
-            return;
-        }
-        // Persist and switch to sidebar mode
-        chrome.storage.local.set({ sidebarPinned: true });
-        ui.remove();
-        ui = null;
-        createEjectFab(ejectFromSidebar);
-    };
+    render();
 };
 
 // ============================================================
-// Eject: remove sidebar items, show panel again
-// ============================================================
-const ejectFromSidebar = () => {
-    // Stop monitor
-    if (monitor) { clearInterval(monitor); monitor = null; }
-    // Remove sidebar injections
-    removeSidebarInjections();
-    // Remove eject fab
-    const fab = document.querySelector('.gemini-exporter-eject-fab');
-    if (fab) fab.remove();
-    // Save state
-    chrome.storage.local.set({ sidebarPinned: false });
-    // Rebuild panel
-    buildPanel();
-};
-
-// ============================================================
-// Init: decide which mode to launch
+// Init
 // ============================================================
 chrome.storage.local.get(['sidebarPinned', 'theme'], (result) => {
-    if (result.theme) currentTheme = result.theme;
+    if (result.theme) state.theme = result.theme;
 
     if (result.sidebarPinned) {
-        // Sidebar mode — wait for Gemini's sidebar to render, then inject
         let retries = 0;
-        const MAX_RETRIES = 20; // 10 seconds max
         const waitForSidebar = () => {
             const found = document.querySelector('mat-action-list.top-action-list');
             if (found) {
-                injectIntoSidebar();
-                const fab = createEjectFab(ejectFromSidebar);
-                fab.classList.add('gemini-exporter-eject-fab');
-            } else if (retries++ < MAX_RETRIES) {
+                state.uiMode = 'sidebar';
+                setupSidebar();
+            } else if (retries++ < 20) {
                 setTimeout(waitForSidebar, 500);
             } else {
-                // Sidebar never appeared — fall back to panel mode
                 buildPanel();
             }
         };
         waitForSidebar();
     } else {
-        // Panel mode
         buildPanel();
     }
 });
