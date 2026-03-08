@@ -1,4 +1,4 @@
-# Gemini Conversation Exporter
+# Gemini Context Exporter
 
 A Chrome extension that captures and exports Google Gemini conversations to well-formatted Markdown files.
 
