@@ -52,6 +52,10 @@ export default function SidebarMode() {
     };
 
     const injectButtons = (originalList) => {
+      // Clean up any stale injected elements first (prevents duplicates)
+      document.querySelectorAll('.gemini-exporter-injected').forEach(el => el.remove());
+      document.querySelectorAll('.gemini-exporter-eject-fab').forEach(el => el.remove());
+
       // Analyze button
       const analyzeList = cloneSidebarButton(
         originalList, SIDEBAR_ICONS.analyzeLg, 'Analyze conversation',
@@ -81,6 +85,7 @@ export default function SidebarMode() {
 
       // Eject FAB
       const fab = document.createElement('button');
+      fab.classList.add('gemini-exporter-eject-fab');
       fab.innerHTML = SIDEBAR_ICONS.eject;
       fab.title = 'Unpin from sidebar';
       fab.style.cssText = `
@@ -105,7 +110,7 @@ export default function SidebarMode() {
       if (timer) clearTimeout(timer);
       // Cleanup injected elements
       document.querySelectorAll('.gemini-exporter-injected').forEach(el => el.remove());
-      if (fabRef.current) fabRef.current.remove();
+      document.querySelectorAll('.gemini-exporter-eject-fab').forEach(el => el.remove());
       mounted.current = false;
     };
   }, [dispatch]);
